@@ -372,7 +372,6 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 // ── Auth: // ── Auth: Logout ──────────────────────────────────────────────────────
- ──────────────────────────────────────────────────────
 
 app.get('/api/auth/me', (req, res) => {
   const token = req.headers['x-session-token'];
