@@ -798,6 +798,46 @@ app.get('/api/admin/export-json', (req, res) => {
     }
   });
 });
+// admin routes...
+app.get('/api/admin/all-team-data', (req, res) => {
+  // ...
+});
+
+// auth check route
+app.get('/api/auth/check', (req, res) => {
+  const token = req.cookies?.sessionToken;
+  const session = getSession(token);
+
+  if (!session) {
+    return res.json({ loggedIn: false });
+  }
+
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+
+  res.json({
+    loggedIn: true,
+    email: session.email,
+    team: session.team,
+    isAdmin: session.email?.toLowerCase() === adminEmail
+  });
+});
+
+// debug route
+app.get('/api/admin/debug-session', (req, res) => {
+  const token = req.cookies?.sessionToken;
+  const session = getSession(token);
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+
+  res.json({
+    hasCookie: !!token,
+    token: token || null,
+    sessionFound: !!session,
+    session: session || null,
+    adminEmail,
+    isAdmin:
+      !!(session && session.email && session.email.toLowerCase() === adminEmail)
+  });
+});
 // ─── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
