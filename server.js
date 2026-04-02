@@ -22,6 +22,61 @@ const PASSWORDS_FILE = path.join(DATA_DIR, 'passwords.json');
 const TOKENS_FILE    = path.join(DATA_DIR, 'reset_tokens.json');
 const SESSIONS_FILE  = path.join(DATA_DIR, 'sessions.json');
 
+// ── Helpers ─────────────────────────────────────────────────────
+const readJSON = (file, fallback) => {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return typeof fallback === 'function' ? fallback() : fallback;
+  }
+};
+
+const writeJSON = (file, data) => {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+};
+
+function createSession(email, team) {
+  const sessions = readJSON(SESSIONS_FILE, {});
+  const token = crypto.randomBytes(32).toString('hex');
+
+  sessions[token] = {
+    email,
+    team,
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 // 7 days
+  };
+
+  writeJSON(SESSIONS_FILE, sessions);
+  return token;
+}
+
+function getSession(token) {
+  if (!token) return null;
+
+  const sessions = readJSON(SESSIONS_FILE, {});
+  const session = sessions[token];
+
+  if (!session) return null;
+
+  if (session.expiresAt && Date.now() > session.expiresAt) {
+    delete sessions[token];
+    writeJSON(SESSIONS_FILE, sessions);
+    return null;
+  }
+
+  return session;
+}
+
+function deleteSession(token) {
+  if (!token) return;
+
+  const sessions = readJSON(SESSIONS_FILE, {});
+  if (sessions[token]) {
+    delete sessions[token];
+    writeJSON(SESSIONS_FILE, sessions);
+  }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function createSession(email, team) {
   const sessions = readJSON(SESSIONS_FILE, {});
