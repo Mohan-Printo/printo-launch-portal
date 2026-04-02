@@ -19,11 +19,46 @@ const STATE_FILE    = path.join(DATA_DIR, 'state.json');
 const EMAIL_LOG     = path.join(DATA_DIR, 'email_log.json');
 const USERS_FILE    = path.join(DATA_DIR, 'users.json');
 const PASSWORDS_FILE = path.join(DATA_DIR, 'passwords.json');
-const TOKENS_FILE   = path.join(DATA_DIR, 'reset_tokens.json');
+const TOKENS_FILE    = path.join(DATA_DIR, 'reset_tokens.json');
+const SESSIONS_FILE  = path.join(DATA_DIR, 'sessions.json');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const readJSON  = (file, fallback) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return typeof fallback === 'function' ? fallback() : fallback; } };
-const writeJSON = (file, data)     => fs.writeFileSync(file, JSON.stringify(data, null, 2));
+function createSession(email, team) {
+  const sessions = readJSON(SESSIONS_FILE, {});
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions[token] = {
+    email,
+    team,
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+  };
+  writeJSON(SESSIONS_FILE, sessions);
+  return token;
+}
+
+function getSession(token) {
+  if (!token) return null;
+  const sessions = readJSON(SESSIONS_FILE, {});
+  const session = sessions[token];
+  if (!session) return null;
+
+  if (session.expiresAt && Date.now() > session.expiresAt) {
+    delete sessions[token];
+    writeJSON(SESSIONS_FILE, sessions);
+    return null;
+  }
+
+  return session;
+}
+
+function deleteSession(token) {
+  if (!token) return;
+  const sessions = readJSON(SESSIONS_FILE, {});
+  if (sessions[token]) {
+    delete sessions[token];
+    writeJSON(SESSIONS_FILE, sessions);
+  }
+}
 
 // ─── Password Helpers ─────────────────────────────────────────────────────────
 function hashPassword(password, salt) {
@@ -227,25 +262,77 @@ app.post('/api/auth/check', (req, res) => {
 
 // ── Auth: Login ────────────────────────────────────────────────────────────────
 app.post('/api/auth/login', (req, res) => {
-  const email    = (req.body.email||'').trim().toLowerCase();
+  const email    = (req.body.email || '').trim().toLowerCase();
   const password = req.body.password || '';
+
   if (!email) return res.status(400).json({ error: 'Email required' });
+
   const users = readJSON(USERS_FILE, makeUsers);
   let foundTeam = null;
+
   for (const [team, emails] of Object.entries(users)) {
-    if ((emails||[]).map(e=>e.toLowerCase()).includes(email)) { foundTeam = team; break; }
+    if ((emails || []).map(e => e.toLowerCase()).includes(email)) {
+      foundTeam = team;
+      break;
+    }
   }
-  if (!foundTeam) return res.status(403).json({ error: 'Email not authorised. Please contact your admin.' });
+
+  if (!foundTeam) {
+    return res.status(403).json({ error: 'Email not authorised. Please contact your admin.' });
+  }
 
   const passwords = readJSON(PASSWORDS_FILE, {});
-  const record    = passwords[email];
+  const record = passwords[email];
+
   if (record && record.hash) {
-    if (!password) return res.status(401).json({ error: 'Password required', needsPassword: true });
-    if (!verifyPassword(password, record.hash, record.salt))
+    if (!password) {
+      return res.status(401).json({ error: 'Password required', needsPassword: true });
+    }
+    if (!verifyPassword(password, record.hash, record.salt)) {
       return res.status(401).json({ error: 'Incorrect password. Please try again or use Forgot Password.' });
+    }
   }
-  // No password set OR correct password
-  res.json({ success: true, team: foundTeam, email, displayName: email.split('@')[0] });
+
+  // Clear old session from same browser (if any)
+  const oldToken = req.headers['x-session-token'];
+  if (oldToken) deleteSession(oldToken);
+
+  const sessionToken = createSession(email, foundTeam);
+
+  res.json({
+    success: true,
+    team: foundTeam,
+    email,
+    displayName: email.split('@')[0],
+    sessionToken
+  });
+});
+
+// ── Auth: Logout ──────────────────────────────────────────────────────
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = req.headers['x-session-token'] || req.body.sessionToken;
+  if (token) deleteSession(token);
+  res.json({ success: true });
+});
+
+// ── Auth: // ── Auth: Logout ──────────────────────────────────────────────────────
+ ──────────────────────────────────────────────────────
+
+app.get('/api/auth/me', (req, res) => {
+  const token = req.headers['x-session-token'];
+  const session = getSession(token);
+
+  if (!session) {
+    return res.status(401).json({ authenticated: false });
+  }
+
+  res.json({
+    authenticated: true,
+    email: session.email,
+    team: session.team,
+    displayName: session.email.split('@')[0]
+  });
 });
 
 // ── Auth: Forgot Password ──────────────────────────────────────────────────────
@@ -541,6 +628,7 @@ app.listen(PORT, () => {
   if (!fs.existsSync(USERS_FILE))  writeJSON(USERS_FILE,  makeUsers());
   if (!fs.existsSync(PASSWORDS_FILE)) writeJSON(PASSWORDS_FILE, {});
   if (!fs.existsSync(TOKENS_FILE))    writeJSON(TOKENS_FILE, {});
+  if (!fs.existsSync(SESSIONS_FILE))  writeJSON(SESSIONS_FILE, {});
   console.log('\nPrinto Launch Portal -> http://localhost:' + PORT);
   console.log('   Email  : ' + (process.env.EMAIL_USER ? 'OK: ' + process.env.EMAIL_USER : 'NOT configured'));
   console.log('   Admin  : ' + (process.env.ADMIN_EMAIL || 'Set ADMIN_EMAIL in .env') + '\n');
