@@ -672,7 +672,132 @@ async function triggerNotifications(taskId, state, data) {
       b(`<p>All tasks for <strong>${product}</strong> have been completed! The product is ready to launch.</p>`));
   }
 }
+// ─────────────────────────────────────────────────────────────
+// Admin Data APIs
+// ─────────────────────────────────────────────────────────────
 
+function isAdminSession(req) {
+  const token = req.cookies?.sessionToken;
+  const session = getSession(token);
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+
+  return !!(session && session.email && session.email.toLowerCase() === adminEmail);
+}
+
+// Get all teams + members + saved state data
+app.get('/api/admin/all-team-data', (req, res) => {
+  if (!isAdminSession(req)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const state = readJSON(STATE_FILE, {});
+  const users = readJSON(USERS_FILE, {});
+
+  const result = Object.keys(users).map(team => ({
+    team,
+    members: users[team] || [],
+    hasData: !!state[team],
+    fieldsFilled: state[team] ? Object.keys(state[team]).length : 0,
+    data: state[team] || {}
+  }));
+
+  res.json({
+    success: true,
+    totalTeams: result.length,
+    teams: result
+  });
+});
+
+// Get one specific team's saved data
+app.get('/api/admin/team/:team', (req, res) => {
+  if (!isAdminSession(req)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const team = req.params.team;
+  const state = readJSON(STATE_FILE, {});
+  const users = readJSON(USERS_FILE, {});
+
+  res.json({
+    success: true,
+    team,
+    members: users[team] || [],
+    hasData: !!state[team],
+    fieldsFilled: state[team] ? Object.keys(state[team]).length : 0,
+    data: state[team] || {}
+  });
+});
+
+// Get a quick summary of which teams filled data
+app.get('/api/admin/submission-summary', (req, res) => {
+  if (!isAdminSession(req)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const state = readJSON(STATE_FILE, {});
+  const users = readJSON(USERS_FILE, {});
+
+  const summary = Object.keys(users).map(team => {
+    const teamData = state[team] || {};
+    return {
+      team,
+      members: users[team] || [],
+      hasData: Object.keys(teamData).length > 0,
+      fieldsFilled: Object.keys(teamData).length
+    };
+  });
+
+  res.json({
+    success: true,
+    totalTeams: summary.length,
+    teamsWithData: summary.filter(t => t.hasData).length,
+    teamsWithoutData: summary.filter(t => !t.hasData).length,
+    summary
+  });
+});
+
+// Get email log (emails sent by system)
+app.get('/api/admin/email-log', (req, res) => {
+  if (!isAdminSession(req)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const log = readJSON(EMAIL_LOG, []);
+  res.json({
+    success: true,
+    totalEmails: Array.isArray(log) ? log.length : 0,
+    emails: Array.isArray(log) ? log : []
+  });
+});
+
+// Export all data as raw JSON
+app.get('/api/admin/export-json', (req, res) => {
+  if (!isAdminSession(req)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  const state = readJSON(STATE_FILE, {});
+  const users = readJSON(USERS_FILE, {});
+  const passwords = readJSON(PASSWORDS_FILE, {});
+  const tokens = readJSON(TOKENS_FILE, {});
+  const sessions = readJSON(SESSIONS_FILE, {});
+  const emailLog = readJSON(EMAIL_LOG, []);
+
+  res.json({
+    success: true,
+    exportedAt: new Date().toISOString(),
+    data: {
+      users,
+      state,
+      emailLog,
+      // keeping these included for admin visibility
+      // remove these 2 if you do not want them exposed
+      passwords,
+      resetTokens: tokens,
+      sessions
+    }
+  });
+});
 // ─── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
