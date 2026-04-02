@@ -227,7 +227,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   writeJSON(TOKENS_FILE, tokens);
 
   const host    = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-  const resetUrl = `${host}/?reset_token=${token}`;
+  const resetUrl = `${host}/reset-password.html?token=${token}`;
 
   const html = authEmailTpl(`
     <p style="font-size:16px;">Hi <strong>${email}</strong>,</p>
