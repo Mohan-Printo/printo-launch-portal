@@ -1,26 +1,41 @@
-  require('dotenv').config();
-const express = require('express');
-const nodemailer = require('nodemailer');
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 
-const app = express();
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+function createSession(email, team) {
+  const sessions = readJSON(SESSIONS_FILE, {});
+  const token = crypto.randomBytes(32).toString('hex');
 
-// ─── Directories ──────────────────────────────────────────────────────────────
-const DATA_DIR    = path.join(__dirname, 'data');
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-[DATA_DIR, UPLOADS_DIR].forEach(d => fs.existsSync(d) || fs.mkdirSync(d, { recursive: true }));
+  sessions[token] = {
+    email,
+    team,
+    createdAt: new Date().toISOString()
+  };
 
-const STATE_FILE    = path.join(DATA_DIR, 'state.json');
-const EMAIL_LOG     = path.join(DATA_DIR, 'email_log.json');
-const USERS_FILE    = path.join(DATA_DIR, 'users.json');
-const PASSWORDS_FILE = path.join(DATA_DIR, 'passwords.json');
-const TOKENS_FILE    = path.join(DATA_DIR, 'reset_tokens.json');
-const SESSIONS_FILE  = path.join(DATA_DIR, 'sessions.json');
+  writeJSON(SESSIONS_FILE, sessions);
+  return token;
+}
+
+function getSession(token) {
+  if (!token) return null;
+  const sessions = readJSON(SESSIONS_FILE, {});
+  return sessions[token] || null;
+}
+
+function deleteSession(token) {
+  if (!token) return;
+  const sessions = readJSON(SESSIONS_FILE, {});
+  if (sessions[token]) {
+    delete sessions[token];
+    writeJSON(SESSIONS_FILE, sessions);
+  }
+}
+
+function isAdminSession(req) {
+  const token = req.cookies?.sessionToken;
+  const session = getSession(token);
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+
+  return !!(session && session.email && session.email.toLowerCase() === adminEmail);
+}
 
 // ── Helpers ─────────────────────────────────────────────────────
 const readJSON = (file, fallback) => {
@@ -315,38 +330,53 @@ app.post('/api/auth/check', (req, res) => {
 });
 
 // ── Auth: Login ────────────────────────────────────────────────────────────────
-app.post('/api/auth/login', (req, res) => {
-  const email    = (req.body.email || '').trim().toLowerCase();
-  const password = req.body.password || '';
+app.post('/api/login', (req, res) => {
+  try {
+    const { team, email, password } = req.body || {};
 
-  if (!email) return res.status(400).json({ error: 'Email required' });
-
-  const users = readJSON(USERS_FILE, makeUsers);
-  let foundTeam = null;
-
-  for (const [team, emails] of Object.entries(users)) {
-    if ((emails || []).map(e => e.toLowerCase()).includes(email)) {
-      foundTeam = team;
-      break;
+    if (!team || !email || !password) {
+      return res.status(400).json({ error: 'Team, email and password are required' });
     }
-  }
 
-  if (!foundTeam) {
-    return res.status(403).json({ error: 'Email not authorised. Please contact your admin.' });
-  }
+    const users = readJSON(USERS_FILE, {});
+    const passwords = readJSON(PASSWORDS_FILE, {});
+    const teamUsers = users[team] || [];
 
-  const passwords = readJSON(PASSWORDS_FILE, {});
-  const record = passwords[email];
+    const emailExistsInTeam = teamUsers.some(u => String(u).toLowerCase() === String(email).toLowerCase());
 
-  if (record && record.hash) {
-    if (!password) {
-      return res.status(401).json({ error: 'Password required', needsPassword: true });
+    if (!emailExistsInTeam) {
+      return res.status(401).json({ error: 'User not found in selected team' });
     }
-    if (!verifyPassword(password, record.hash, record.salt)) {
-      return res.status(401).json({ error: 'Incorrect password. Please try again or use Forgot Password.' });
-    }
-  }
 
+    const savedPassword = passwords[email.toLowerCase()];
+    if (!savedPassword || savedPassword !== password) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    const token = createSession(email, team);
+
+    // IMPORTANT for Render / HTTPS
+    res.cookie('sessionToken', token, {
+      httpOnly: true,
+      secure: true,        // Render uses HTTPS
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      email,
+      team,
+      isAdmin: email.toLowerCase() === adminEmail
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
   // Clear old session from same browser (if any)
   const oldToken = req.headers['x-session-token'];
   if (oldToken) deleteSession(oldToken);
@@ -372,19 +402,22 @@ app.post('/api/auth/logout', (req, res) => {
 
 // ── Auth: // ── Auth: Logout ──────────────────────────────────────────────────────
 
-app.get('/api/auth/me', (req, res) => {
-  const token = req.headers['x-session-token'];
-  const session = getSession(token);
+app.post('/api/logout', (req, res) => {
+  const token = req.cookies?.sessionToken;
 
-  if (!session) {
-    return res.status(401).json({ authenticated: false });
+  if (token) {
+    deleteSession(token);
   }
 
+  res.clearCookie('sessionToken', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax'
+  });
+
   res.json({
-    authenticated: true,
-    email: session.email,
-    team: session.team,
-    displayName: session.email.split('@')[0]
+    success: true,
+    message: 'Logged out successfully'
   });
 });
 
@@ -495,7 +528,7 @@ app.post('/api/auth/admin/set-password', async (req, res) => {
 // ── Admin: Clear password for a user (back to email-only login) ───────────────
 app.post('/api/auth/admin/clear-password', (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'email required' });
+  if (!email) return res.status(100).json({ error: 'email required' });
   const passwords = readJSON(PASSWORDS_FILE, {});
   delete passwords[email.toLowerCase()];
   writeJSON(PASSWORDS_FILE, passwords);
@@ -809,7 +842,9 @@ app.get('/api/auth/check', (req, res) => {
   const session = getSession(token);
 
   if (!session) {
-    return res.json({ loggedIn: false });
+    return res.json({
+      loggedIn: false
+    });
   }
 
   const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
