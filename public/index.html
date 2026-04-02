@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Printo Launch Portal</title>
+<style>
+:root{
+  --bg0:#040810;--bg1:#080d18;--bg2:#0d1320;--bg3:#111926;
+  --glass:rgba(255,255,255,0.04);--glass2:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --primary:#6366f1;--primary-d:#4f46e5;--primary-glow:rgba(99,102,241,.35);
+  --accent:#4f8ef7;--accent-glow:rgba(79,142,247,.3);
+  --success:#10b981;--success-bg:rgba(16,185,129,.12);
+  --warning:#f59e0b;--warning-bg:rgba(245,158,11,.12);
+  --error:#ef4444;--error-bg:rgba(239,68,68,.12);
+  --locked:#334155;--locked-bg:rgba(51,65,85,.2);
+  --text0:#f1f5f9;--text1:#e2e8f0;--text2:#94a3b8;--text3:#475569;
+  --radius:14px;--radius-sm:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg0);color:var(--text1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(99,102,241,.18) 0%,transparent 60%),radial-gradient(ellipse 40% 40% at 80% 80%,rgba(79,142,247,.1) 0%,transparent 60%);pointer-events:none;z-index:0;}
+#root{position:relative;z-index:1;}
+
+/* ── Login / Auth ── */
+.auth-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
+.auth-card{background:var(--glass);border:1px solid var(--border2);backdrop-filter:blur(20px);border-radius:20px;padding:48px 40px;width:100%;max-width:440px;text-align:center;}
+.auth-logo{width:64px;height:64px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 24px;}
+.auth-card h1{font-size:26px;font-weight:700;color:var(--text0);margin-bottom:6px;}
+.auth-card .sub{color:var(--text2);font-size:15px;margin-bottom:28px;}
+.input-wrap{position:relative;margin-bottom:14px;}
+.input-wrap input{width:100%;padding:14px 18px;background:rgba(255,255,255,.06);border:1px solid var(--border2);border-radius:10px;color:var(--text0);font-size:15px;outline:none;transition:all .2s;}
+.input-wrap input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);}
+.input-wrap input::placeholder{color:var(--text3);}
+.toggle-pw{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 24px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all .2s;text-decoration:none;width:100%;}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px var(--primary-glow);}
+.btn-primary:disabled{opacity:.4;transform:none;cursor:not-allowed;}
+.btn-ghost{background:var(--glass);border:1px solid var(--border2);color:var(--text1);width:auto;}
+.btn-ghost:hover{background:var(--glass2);}
+.btn-sm{padding:7px 14px;font-size:13px;width:auto;}
+.btn-danger{background:var(--error-bg);border:1px solid rgba(239,68,68,.3);color:var(--error);width:auto;}
+.btn-danger:hover{background:rgba(239,68,68,.2);}
+.btn-success{background:var(--success-bg);border:1px solid rgba(16,185,129,.3);color:var(--success);width:auto;}
+.btn-success:hover{background:rgba(16,185,129,.2);}
+.btn-warn{background:var(--warning-bg);border:1px solid rgba(245,158,11,.3);color:var(--warning);width:auto;}
+.btn-warn:hover{background:rgba(245,158,11,.2);}
+.err-box{background:var(--error-bg);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:11px 14px;color:var(--error);font-size:14px;margin-bottom:14px;text-align:left;display:none;}
+.err-box.show{display:block;}
+.ok-box{background:var(--success-bg);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:11px 14px;color:var(--success);font-size:14px;margin-bottom:14px;text-align:left;display:none;}
+.ok-box.show{display:block;}
+.link-btn{background:none;border:none;color:var(--primary);font-size:14px;cursor:pointer;text-decoration:underline;padding:0;}
+.link-btn:hover{color:var(--accent);}
+.divider-text{color:var(--text3);font-size:13px;margin:16px 0;position:relative;}
+.auth-step{display:none;}.auth-step.active{display:block;}
+.back-link{display:inline-flex;align-items:center;gap:6px;color:var(--text2);font-size:14px;cursor:pointer;background:none;border:none;margin-bottom:20px;}
+.back-link:hover{color:var(--text0);}
+
+/* ── App ── */
+#app{display:none;}
+header{position:sticky;top:0;z-index:100;background:rgba(4,8,16,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;}
+.header-inner{max-width:1200px;margin:0 auto;height:62px;display:flex;align-items:center;gap:16px;}
+.header-logo{display:flex;align-items:center;gap:10px;}
+.header-logo .logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.header-logo span{font-size:17px;font-weight:700;color:var(--text0);}
+.header-spacer{flex:1;}
+.team-badge{background:var(--glass2);border:1px solid var(--border2);border-radius:100px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--text1);}
+.nav-tabs{display:flex;gap:2px;margin-left:16px;}
+.nav-tab{padding:6px 16px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;background:none;border:none;}
+.nav-tab:hover,.nav-tab.active{background:var(--glass2);color:var(--text0);}
+.logout-btn{padding:7px 14px;border-radius:8px;background:var(--glass);border:1px solid var(--border);color:var(--text2);font-size:13px;cursor:pointer;transition:all .15s;}
+.logout-btn:hover{border-color:var(--error);color:var(--error);}
+
+/* ── Content ── */
+.content{max-width:1200px;margin:0 auto;padding:32px 24px;}
+.page-section{display:none;}.page-section.active{display:block;}
+.dash-header{margin-bottom:28px;}
+.dash-header h2{font-size:26px;font-weight:700;color:var(--text0);}
+.dash-header p{color:var(--text2);font-size:15px;margin-top:4px;}
+.product-banner{background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(79,142,247,.1));border:1px solid rgba(99,102,241,.3);border-radius:14px;padding:20px 24px;margin-bottom:28px;display:flex;align-items:center;gap:16px;}
+.product-banner .pb-icon{font-size:32px;}
+.product-banner .pb-text h3{font-size:18px;font-weight:700;color:var(--text0);}
+.product-banner .pb-text p{font-size:13px;color:var(--text2);margin-top:2px;}
+.pb-id{margin-left:auto;text-align:right;}
+.pb-id span{font-family:monospace;font-size:13px;background:rgba(99,102,241,.2);padding:4px 10px;border-radius:6px;color:var(--primary);border:1px solid rgba(99,102,241,.3);}
+.section-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:12px;}
+.task-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:24px;}
+.task-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.task-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--primary);transform:scaleX(0);transition:transform .2s;transform-origin:left;}
+.task-card:hover::before,.task-card.status-pending::before{transform:scaleX(1);}
+.task-card.status-done::before{background:var(--success);transform:scaleX(1);}
+.task-card.status-locked::before{background:var(--locked);}
+.task-card:hover{background:var(--glass2);border-color:var(--border2);}
+.task-card.status-locked{opacity:.55;cursor:default;}
+.task-card.status-pending{border-color:rgba(99,102,241,.35);}
+.task-card.status-done{border-color:rgba(16,185,129,.25);}
+.task-card-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}
+.task-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.task-card.status-pending .task-icon{background:rgba(99,102,241,.15);}
+.task-card.status-done    .task-icon{background:rgba(16,185,129,.15);}
+.task-card.status-locked  .task-icon{background:rgba(51,65,85,.3);}
+.task-label{font-size:15px;font-weight:600;color:var(--text0);line-height:1.4;}
+.task-team-chip{font-size:11px;padding:2px 8px;border-radius:100px;margin-top:4px;display:inline-block;font-weight:600;}
+.task-status-row{display:flex;align-items:center;justify-content:space-between;}
+.status-chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:100px;}
+.status-chip.pending{background:rgba(99,102,241,.15);color:var(--primary);border:1px solid rgba(99,102,241,.3);}
+.status-chip.done{background:var(--success-bg);color:var(--success);border:1px solid rgba(16,185,129,.3);}
+.status-chip.locked{background:var(--locked-bg);color:var(--text3);border:1px solid rgba(51,65,85,.4);}
+.task-completed-by{font-size:12px;color:var(--text3);}
+.task-arrow{color:var(--text3);font-size:16px;}
+.team-category    {background:rgba(99,102,241,.15);color:#818cf8;}
+.team-procurement {background:rgba(245,158,11,.15);color:#fbbf24;}
+.team-production  {background:rgba(16,185,129,.15);color:#34d399;}
+.team-commercial  {background:rgba(79,142,247,.15);color:#60a5fa;}
+.team-inventory   {background:rgba(168,85,247,.15);color:#c084fc;}
+.team-sku         {background:rgba(236,72,153,.15);color:#f472b6;}
+.team-admin       {background:rgba(239,68,68,.15);color:#f87171;}
+
+/* ── Task Modal ── */
+.task-detail{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;}
+.task-detail-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);}
+.task-detail-card{position:relative;background:#0d1320;border:1px solid var(--border2);border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:32px;}
+.task-detail-card::-webkit-scrollbar{width:6px;}
+.task-detail-card::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.detail-team-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:16px;}
+.detail-title{font-size:24px;font-weight:700;color:var(--text0);margin-bottom:6px;}
+.detail-subtitle{font-size:14px;color:var(--text2);margin-bottom:24px;}
+.form-group{margin-bottom:20px;}
+.form-label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+.form-label.required::after{content:' *';color:var(--error);}
+.form-input{width:100%;padding:12px 14px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:10px;color:var(--text0);font-size:14px;outline:none;transition:all .2s;}
+.form-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);}
+.form-input::placeholder{color:var(--text3);}
+textarea.form-input{resize:vertical;min-height:90px;}
+.radio-group{display:flex;flex-direction:column;gap:10px;}
+.radio-option{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--glass);border:1px solid var(--border2);border-radius:10px;cursor:pointer;transition:all .15s;}
+.radio-option:hover{background:var(--glass2);}
+.radio-option.selected{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.4);}
+.radio-option input[type=radio]{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+.radio-option-content{flex:1;}
+.radio-option-label{font-size:14px;font-weight:600;color:var(--text0);}
+.radio-option-sub{font-size:13px;color:var(--text2);margin-top:2px;}
+.detail-footer{display:flex;gap:12px;margin-top:28px;}
+.done-banner{background:var(--success-bg);border:1px solid rgba(16,185,129,.3);border-radius:12px;padding:16px 20px;display:flex;gap:12px;align-items:flex-start;}
+.done-banner .done-icon{font-size:22px;}
+.done-banner h4{font-size:15px;font-weight:600;color:var(--success);}
+.done-banner p{font-size:13px;color:var(--text2);margin-top:2px;}
+
+/* ── Admin ── */
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:768px){.admin-grid{grid-template-columns:1fr;}}
+.admin-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);padding:24px;}
+.admin-card h3{font-size:16px;font-weight:700;color:var(--text0);margin-bottom:16px;}
+.user-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:16px;}
+.user-list::-webkit-scrollbar{width:4px;}
+.user-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.user-item{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;}
+.user-email{flex:1;font-size:13px;color:var(--text1);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-team-chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:100px;flex-shrink:0;}
+.pw-badge{font-size:11px;padding:2px 8px;border-radius:100px;flex-shrink:0;}
+.pw-badge.has-pw{background:var(--success-bg);color:var(--success);border:1px solid rgba(16,185,129,.3);}
+.pw-badge.no-pw{background:var(--warning-bg);color:var(--warning);border:1px solid rgba(245,158,11,.3);}
+.user-actions{display:flex;gap:4px;flex-shrink:0;}
+.icon-btn{background:none;border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;padding:4px 8px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.icon-btn:hover{border-color:var(--primary);color:var(--primary);}
+.icon-btn.del:hover{border-color:var(--error);color:var(--error);}
+.add-user-form{display:flex;gap:8px;flex-wrap:wrap;}
+.add-user-form input{flex:1;min-width:140px;padding:9px 12px;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:8px;color:var(--text0);font-size:13px;outline:none;}
+.add-user-form input:focus{border-color:var(--primary);}
+.add-user-form select{padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text1);font-size:13px;outline:none;}
+.task-admin-list{display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;}
+.task-admin-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;}
+.tai-label{flex:1;font-size:13px;color:var(--text1);}
+.tai-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:100px;}
+.tai-reset{background:none;border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;padding:4px 10px;cursor:pointer;transition:all .15s;}
+.tai-reset:hover{border-color:var(--warning);color:var(--warning);}
+.email-log{max-height:280px;overflow-y:auto;}
+.email-log::-webkit-scrollbar{width:4px;}
+.email-log::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.email-item{padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;}
+.email-item .ei-subject{font-size:13px;font-weight:600;color:var(--text0);}
+.email-item .ei-to{font-size:12px;color:var(--text2);margin-top:2px;}
+.email-item .ei-time{font-size:11px;color:var(--text3);margin-top:4px;}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;}
+.stat-box .sv{font-size:28px;font-weight:700;color:var(--text0);}
+.stat-box .sl{font-size:12px;color:var(--text2);margin-top:4px;}
+.reset-all-btn{background:var(--error-bg);border:1px solid rgba(239,68,68,.3);color:var(--error);padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;width:100%;transition:all .15s;}
+.reset-all-btn:hover{background:rgba(239,68,68,.2);}
+
+/* ── Password Modal ── */
+.modal-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:none;}
+.modal-overlay.show{display:flex;}
+.modal-card{background:#0d1320;border:1px solid var(--border2);border-radius:20px;padding:32px;width:100%;max-width:400px;}
+.modal-card h3{font-size:18px;font-weight:700;color:var(--text0);margin-bottom:6px;}
+.modal-card p{font-size:14px;color:var(--text2);margin-bottom:20px;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(20px);opacity:0;transition:all .3s;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:#064e3b;border:1px solid rgba(16,185,129,.4);color:#6ee7b7;}
+.toast.error{background:#7f1d1d;border:1px solid rgba(239,68,68,.4);color:#fca5a5;}
+.toast.info{background:#1e1b4b;border:1px solid rgba(99,102,241,.4);color:#a5b4fc;}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.refresh-info{text-align:center;font-size:12px;color:var(--text3);padding:8px;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);}
+.empty-state .es-icon{font-size:40px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+<div id="root">
+
+<!-- ── LOGIN ── -->
+<div id="page-login" class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">🚀</div>
+    <h1>Printo Launch Portal</h1>
+
+    <!-- Step 1: Email -->
+    <div class="auth-step active" id="step-email">
+      <p class="sub">Enter your work email to continue</p>
+      <div id="err-email" class="err-box"></div>
+      <div class="input-wrap"><input type="email" id="inp-email" placeholder="you@printo.in" autocomplete="email" /></div>
+      <button class="btn btn-primary" id="btn-email-next" onclick="checkEmail()"><span id="btn-email-txt">Continue →</span></button>
+      <p style="margin-top:18px;font-size:13px;color:var(--text3);">Access is granted by email. Contact your admin if you don't have access.</p>
+    </div>
+
+    <!-- Step 2: Password -->
+    <div class="auth-step" id="step-password">
+      <button class="back-link" onclick="backToEmail()">← Back</button>
+      <p class="sub" id="pw-email-display" style="text-align:left;margin-bottom:20px;"></p>
+      <div id="err-password" class="err-box"></div>
+      <div class="input-wrap">
+        <input type="password" id="inp-password" placeholder="Enter your password" autocomplete="current-password" />
+        <button class="toggle-pw" onclick="togglePw('inp-password',this)" title="Show/hide">👁</button>
+      </div>
+      <button class="btn btn-primary" id="btn-login" onclick="doLogin()"><span id="btn-login-txt">Sign In →</span></button>
+      <div style="margin-top:16px;text-align:center;">
+        <button class="link-btn" onclick="showForgot()">Forgot password?</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Forgot Password -->
+    <div class="auth-step" id="step-forgot">
+      <button class="back-link" onclick="showStep('step-email')">← Back to login</button>
+      <p class="sub" style="text-align:left;">Enter your email and we'll send a password reset link.</p>
+      <div id="err-forgot" class="err-box"></div>
+      <div id="ok-forgot" class="ok-box"></div>
+      <div class="input-wrap"><input type="email" id="inp-forgot-email" placeholder="you@printo.in" /></div>
+      <button class="btn btn-primary" id="btn-forgot" onclick="doForgot()"><span id="btn-forgot-txt">Send Reset Link →</span></button>
+    </div>
+
+    <!-- Step 4: Reset Password (via token) -->
+    <div class="auth-step" id="step-reset">
+      <p class="sub" style="text-align:left;">Set your new password below.</p>
+      <div id="err-reset" class="err-box"></div>
+      <div id="ok-reset" class="ok-box"></div>
+      <div class="input-wrap">
+        <input type="password" id="inp-new-pw" placeholder="New password (min 6 chars)" />
+        <button class="toggle-pw" onclick="togglePw('inp-new-pw',this)" title="Show/hide">👁</button>
+      </div>
+      <div class="input-wrap">
+        <input type="password" id="inp-confirm-pw" placeholder="Confirm new password" />
+        <button class="toggle-pw" onclick="togglePw('inp-confirm-pw',this)" title="Show/hide">👁</button>
+      </div>
+      <button class="btn btn-primary" id="btn-reset" onclick="doResetPassword()"><span id="btn-reset-txt">Set New Password →</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <header>
+    <div class="header-inner">
+      <div class="header-logo">
+        <div class="logo-icon">🚀</div>
+        <span>Printo Portal</span>
+      </div>
+      <div class="nav-tabs" id="nav-tabs">
+        <button class="nav-tab active" onclick="showSection('dashboard',this)">Dashboard</button>
+        <button class="nav-tab admin-only" onclick="showSection('admin',this)" style="display:none">Admin ⚙️</button>
+      </div>
+      <div class="header-spacer"></div>
+      <span class="team-badge" id="header-team-badge"></span>
+      <button class="logout-btn" onclick="logout()" style="margin-left:12px;">Sign Out</button>
+    </div>
+  </header>
+  <div class="content">
+    <div class="page-section active" id="section-dashboard">
+      <div class="dash-header">
+        <h2 id="dash-greeting">Welcome back</h2>
+        <p id="dash-subtitle">Here are your pending tasks.</p>
+      </div>
+      <div id="product-banner-area"></div>
+      <div id="task-list-area"></div>
+      <div class="refresh-info" id="refresh-info"></div>
+    </div>
+    <div class="page-section" id="section-admin">
+      <div class="dash-header"><h2>Admin Panel</h2><p>Manage users, passwords, tasks and monitor the launch portal.</p></div>
+      <div class="stat-row" id="admin-stats"></div>
+      <div class="admin-grid">
+        <div>
+          <div class="admin-card">
+            <h3>👥 Team Access & Passwords</h3>
+            <div class="user-list" id="user-list"></div>
+            <div class="add-user-form">
+              <input type="email" id="new-user-email" placeholder="email@printo.in" />
+              <select id="new-user-team">
+                <option value="category">Category</option>
+                <option value="procurement">Procurement</option>
+                <option value="production">Production</option>
+                <option value="commercial">Commercial</option>
+                <option value="inventory">Inventory</option>
+                <option value="sku">SKU (Gayathri)</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="addUser()">Add</button>
+            </div>
+          </div>
+          <div class="admin-card" style="margin-top:16px;">
+            <h3>📧 Email Log</h3>
+            <div class="email-log" id="email-log"></div>
+          </div>
+        </div>
+        <div>
+          <div class="admin-card">
+            <h3>📋 Task Control</h3>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Reset individual tasks to allow re-completion.</p>
+            <div class="task-admin-list" id="task-admin-list"></div>
+          </div>
+          <div class="admin-card" style="margin-top:16px;">
+            <h3>⚠️ Danger Zone</h3>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Full reset clears all tasks and starts a new launch cycle.</p>
+            <button class="reset-all-btn" onclick="resetAll()">Reset All Launch Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Task Modal ── -->
+<div id="task-modal" class="task-detail" style="display:none;">
+  <div class="task-detail-backdrop" onclick="closeTaskModal()"></div>
+  <div class="task-detail-card" id="task-modal-body"></div>
+</div>
+
+<!-- ── Set Password Modal (admin) ── -->
+<div class="modal-overlay" id="pw-modal">
+  <div class="modal-card">
+    <h3>Set Password</h3>
+    <p id="pw-modal-desc">Set a new password for this user.</p>
+    <div id="err-pw-modal" class="err-box"></div>
+    <div class="input-wrap" style="margin-bottom:12px;">
+      <input type="password" id="pw-modal-input" placeholder="New password (min 6 chars)" />
+      <button class="toggle-pw" onclick="togglePw('pw-modal-input',this)">👁</button>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost btn-sm" onclick="closePwModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" style="flex:1;" onclick="adminSetPassword()">Set Password</button>
+    </div>
+    <div style="margin-top:12px;text-align:center;">
+      <button class="link-btn" onclick="adminClearPassword()" style="font-size:13px;color:var(--error);">Remove password (email-only login)</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────
+const TEAM_META = {
+  category:    { label:'Category Team',    emoji:'🎯', color:'team-category'    },
+  procurement: { label:'Procurement Team', emoji:'🏭', color:'team-procurement' },
+  production:  { label:'Production Team',  emoji:'⚙️',  color:'team-production'  },
+  commercial:  { label:'Commercial Team',  emoji:'💼', color:'team-commercial'  },
+  inventory:   { label:'Inventory Team',   emoji:'📦', color:'team-inventory'   },
+  sku:         { label:'SKU (Gayathri)',    emoji:'🔖', color:'team-sku'         },
+  admin:       { label:'Admin',            emoji:'👑', color:'team-admin'       },
+};
+const TASK_ICONS = {
+  product_info:'📝',vendor_check:'🔍',vendor_path:'🛤',procurement_vendor:'🏭',
+  vendor_onboarding:'📋',rd_process:'🧪',sample_prep:'🔬',inventory_form:'📊',
+  inventory_approval:'✅',po_confirmation:'📄',sku_update:'🔖',website_content:'🌐',
+  material_dispatch:'🚚',material_received_update:'📬',hub_briefing:'🗺',
+  stock_dispatch:'📦',marketing_collateral:'🎨',express_delivery:'⚡',
+  sales_briefing:'💬',release_notes:'📣',
+};
+
+// ── State ─────────────────────────────────────────────────────
+let currentUser = null;
+let serverState = null;
+let refreshInterval = null;
+let pwModalTarget = null; // { email, team }
+
+// ── API ───────────────────────────────────────────────────────
+async function api(method, url, body) {
+  const opts = { method, headers:{'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Request failed');
+  return d;
+}
+
+// ── Auth helpers ──────────────────────────────────────────────
+function showStep(id) {
+  document.querySelectorAll('.auth-step').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function backToEmail() { showStep('step-email'); }
+
+function showForgot() {
+  document.getElementById('inp-forgot-email').value = document.getElementById('inp-email').value;
+  showStep('step-forgot');
+}
+
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+function setBtnLoading(btnId, txtId, loading) {
+  const btn = document.getElementById(btnId);
+  const txt = document.getElementById(txtId);
+  if (!btn || !txt) return;
+  btn.disabled = loading;
+  txt.innerHTML = loading ? '<span class="spinner"></span>' : txt.dataset.label || txt.textContent;
+}
+
+async function checkEmail() {
+  const email = document.getElementById('inp-email').value.trim().toLowerCase();
+  const errEl = document.getElementById('err-email');
+  errEl.classList.remove('show');
+  if (!email) { errEl.textContent = 'Please enter your email.'; errEl.classList.add('show'); return; }
+  document.getElementById('btn-email-next').disabled = true;
+  document.getElementById('btn-email-txt').innerHTML = '<span class="spinner"></span>';
+  try {
+    const data = await api('POST', '/api/auth/check', { email });
+    if (data.hasPassword) {
+      document.getElementById('pw-email-display').innerHTML = 'Signing in as <strong>' + esc(email) + '</strong>';
+      showStep('step-password');
+    } else {
+      // No password set — log in directly
+      currentUser = { email, team: data.team, displayName: email.split('@')[0] };
+      sessionStorage.setItem('printo_user', JSON.stringify(currentUser));
+      startApp();
+    }
+  } catch(e) {
+    errEl.textContent = e.message; errEl.classList.add('show');
+  } finally {
+    document.getElementById('btn-email-next').disabled = false;
+    document.getElementById('btn-email-txt').textContent = 'Continue →';
+  }
+}
+
+async function doLogin() {
+  const email    = document.getElementById('inp-email').value.trim().toLowerCase();
+  const password = document.getElementById('inp-password').value;
+  const errEl    = document.getElementById('err-password');
+  errEl.classList.remove('show');
+  if (!password) { errEl.textContent = 'Please enter your password.'; errEl.classList.add('show'); return; }
+  document.getElementById('btn-login').disabled = true;
+  document.getElementById('btn-login-txt').innerHTML = '<span class="spinner"></span>';
+  try {
+    const data = await api('POST', '/api/auth/login', { email, password });
+    currentUser = { email: data.email, team: data.team, displayName: data.displayName };
+    sessionStorage.setItem('printo_user', JSON.stringify(currentUser));
+    startApp();
+  } catch(e) {
+    errEl.textContent = e.message; errEl.classList.add('show');
+    document.getElementById('btn-login').disabled = false;
+    document.getElementById('btn-login-txt').textContent = 'Sign In →';
+  }
+}
+
+async function doForgot() {
+  const email = document.getElementById('inp-forgot-email').value.trim().toLowerCase();
+  const errEl = document.getElementById('err-forgot');
+  const okEl  = document.getElementById('ok-forgot');
+  errEl.classList.remove('show'); okEl.classList.remove('show');
+  if (!email) { errEl.textContent = 'Please enter your email.'; errEl.classList.add('show'); return; }
+  document.getElementById('btn-forgot').disabled = true;
+  document.getElementById('btn-forgot-txt').innerHTML = '<span class="spinner"></span>';
+  try {
+    await api('POST', '/api/auth/forgot-password', { email });
+    okEl.textContent = 'Reset link sent! Check your email (including spam folder). Link expires in 1 hour.';
+    okEl.classList.add('show');
+  } catch(e) {
+    errEl.textContent = e.message; errEl.classList.add('show');
+  } finally {
+    document.getElementById('btn-forgot').disabled = false;
+    document.getElementById('btn-forgot-txt').textContent = 'Send Reset Link →';
+  }
+}
+
+async function doResetPassword() {
+  const token     = new URLSearchParams(window.location.search).get('reset_token');
+  const newPw     = document.getElementById('inp-new-pw').value;
+  const confirmPw = document.getElementById('inp-confirm-pw').value;
+  const errEl     = document.getElementById('err-reset');
+  const okEl      = document.getElementById('ok-reset');
+  errEl.classList.remove('show'); okEl.classList.remove('show');
+  if (!newPw || newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); return; }
+  if (newPw !== confirmPw) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); return; }
+  document.getElementById('btn-reset').disabled = true;
+  document.getElementById('btn-reset-txt').innerHTML = '<span class="spinner"></span>';
+  try {
+    const d = await api('POST', '/api/auth/reset-password', { token, newPassword: newPw });
+    okEl.textContent = d.message + ' Redirecting to login...';
+    okEl.classList.add('show');
+    setTimeout(() => { window.location.href = '/'; }, 2500);
+  } catch(e) {
+    errEl.textContent = e.message; errEl.classList.add('show');
+    document.getElementById('btn-reset').disabled = false;
+    document.getElementById('btn-reset-txt').textContent = 'Set New Password →';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('printo_user');
+  currentUser = null; serverState = null;
+  clearInterval(refreshInterval);
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('page-login').style.display = 'flex';
+  showStep('step-email');
+  document.getElementById('inp-email').value = '';
+  document.getElementById('inp-password').value = '';
+  window.history.replaceState({}, '', '/');
+}
+
+// ── App Start ─────────────────────────────────────────────────
+async function startApp() {
+  document.getElementById('page-login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  const m = TEAM_META[currentUser.team] || {};
+  document.getElementById('header-team-badge').textContent = (m.emoji||'') + ' ' + (m.label||currentUser.team);
+  if (currentUser.team === 'admin') {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+  }
+  await loadState();
+  refreshInterval = setInterval(loadState, 30000);
+}
+
+async function loadState() {
+  try {
+    serverState = await api('GET', '/api/state');
+    renderDashboard();
+    if (currentUser.team === 'admin' && document.getElementById('section-admin').classList.contains('active')) {
+      renderAdmin();
+    }
+    document.getElementById('refresh-info').textContent = 'Auto-refreshes every 30s · Last: ' + new Date().toLocaleTimeString();
+  } catch(e) { console.error(e); }
+}
+
+// ── Navigation ────────────────────────────────────────────────
+function showSection(name, btn) {
+  document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'admin') renderAdmin();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────
+function renderDashboard() {
+  if (!serverState || !currentUser) return;
+  const team = currentUser.team;
+  const m = TEAM_META[team] || {};
+  document.getElementById('dash-greeting').textContent = 'Welcome, ' + (currentUser.displayName || currentUser.email.split('@')[0]);
+  document.getElementById('dash-subtitle').textContent = team === 'admin' ? 'Full overview of all launch tasks.' : 'Showing tasks for ' + (m.label || team) + '.';
+  const bannerArea = document.getElementById('product-banner-area');
+  if (serverState.productName) {
+    bannerArea.innerHTML = `<div class="product-banner"><div class="pb-icon">📦</div><div class="pb-text"><h3>${esc(serverState.productName)}</h3><p>Launch in progress · Created ${new Date(serverState.createdAt).toLocaleDateString()}</p></div><div class="pb-id"><span>ID: ${serverState.launchId}</span></div></div>`;
+  } else { bannerArea.innerHTML = ''; }
+  const listArea = document.getElementById('task-list-area');
+  const tasks = serverState.tasks;
+  const myTasks = Object.entries(tasks).filter(([,t]) => team === 'admin' || t.team === team);
+  if (!myTasks.length) { listArea.innerHTML = '<div class="empty-state"><div class="es-icon">✅</div><p>No tasks assigned to your team.</p></div>'; return; }
+  const pending = myTasks.filter(([,t]) => t.status === 'pending');
+  const done    = myTasks.filter(([,t]) => t.status === 'done');
+  const locked  = myTasks.filter(([,t]) => t.status === 'locked');
+  let html = '';
+  if (pending.length) { html += `<div class="section-title">🔵 Action Required (${pending.length})</div><div class="task-grid">${pending.map(([id,t])=>taskCard(id,t)).join('')}</div>`; }
+  if (done.length)    { html += `<div class="section-title">✅ Completed (${done.length})</div><div class="task-grid">${done.map(([id,t])=>taskCard(id,t)).join('')}</div>`; }
+  if (locked.length)  { html += `<div class="section-title">🔒 Waiting on other teams (${locked.length})</div><div class="task-grid">${locked.map(([id,t])=>taskCard(id,t)).join('')}</div>`; }
+  listArea.innerHTML = html;
+}
+
+function taskCard(id, t) {
+  const m = TEAM_META[t.team] || {};
+  const icon = TASK_ICONS[id] || '📌';
+  const clickable = t.status !== 'locked';
+  return `<div class="task-card status-${t.status}" onclick="${clickable ? `openTask('${id}')` : ''}">
+    <div class="task-card-header"><div class="task-icon">${icon}</div><div style="flex:1;"><div class="task-label">${esc(t.label)}</div><span class="task-team-chip ${m.color}">${m.emoji} ${m.label}</span></div></div>
+    <div class="task-status-row"><span class="status-chip ${t.status}">${t.status==='pending'?'Action Required':t.status==='done'?'✓ Complete':'🔒 Locked'}</span>${t.status==='done'?`<span class="task-completed-by">${esc(t.completedBy||'')}</span>`:''} ${clickable?'<span class="task-arrow">›</span>':''}</div>
+  </div>`;
+}
+
+// ── Task Modal ────────────────────────────────────────────────
+function openTask(taskId) {
+  const t = serverState.tasks[taskId];
+  if (!t || t.status === 'locked') return;
+  document.getElementById('task-modal-body').innerHTML = buildTaskForm(taskId, t);
+  document.getElementById('task-modal').style.display = 'flex';
+}
+function closeTaskModal() { document.getElementById('task-modal').style.display = 'none'; }
+
+function buildTaskForm(id, t) {
+  const m = TEAM_META[t.team] || {};
+  const product = serverState.productName || 'this product';
+  const done = t.status === 'done';
+  const header = `<div class="detail-team-badge ${m.color}">${m.emoji} ${m.label.toUpperCase()}</div><div class="detail-title">${esc(t.label)}</div>`;
+  if (done) {
+    const ca = t.completedAt ? new Date(t.completedAt).toLocaleString() : '';
+    return header + `<div class="done-banner" style="margin-top:12px;"><div class="done-icon">✅</div><div><h4>Task Completed</h4><p>By ${esc(t.completedBy||'')} · ${ca}</p></div></div><div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">Close</button></div>`;
+  }
+  const forms = {
+    product_info: () => `<div class="detail-subtitle">Enter the basic details for this product launch.</div>
+      <div class="form-group"><label class="form-label required">Product Name</label><input class="form-input" id="f_productName" placeholder="e.g. Premium Cotton T-Shirt" value="${esc(serverState.productName||'')}" /></div>
+      <div class="form-group"><label class="form-label required">Product Category</label><input class="form-input" id="f_category" placeholder="e.g. Apparel" /></div>
+      <div class="form-group"><label class="form-label">Description / Notes</label><textarea class="form-input" id="f_description" placeholder="Brief description..."></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('product_info',()=>({productName:v('f_productName'),category:v('f_category'),description:v('f_description')}),['f_productName','f_category'])">Save & Continue →</button></div>`,
+
+    vendor_check: () => `<div class="detail-subtitle">Check if an existing vendor can supply <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">Can existing vendor supply?</label>
+      <div class="radio-group">
+        <label class="radio-option" onclick="selectRadio('vcr','can_supply')"><input type="radio" name="vcr" value="can_supply"/><div class="radio-option-content"><div class="radio-option-label">✅ Yes — Existing vendor can supply</div></div></label>
+        <label class="radio-option" onclick="selectRadio('vcr','cannot_supply')"><input type="radio" name="vcr" value="cannot_supply"/><div class="radio-option-content"><div class="radio-option-label">❌ No — Existing vendor cannot supply</div><div class="radio-option-sub">You'll select a sourcing path next</div></div></label>
+      </div></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="f_vnotes"></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('vendor_check',()=>{const r=getRadio('vcr');return r?{result:r,notes:v('f_vnotes')}:null;})">Continue →</button></div>`,
+
+    vendor_path: () => `<div class="detail-subtitle">Existing vendor cannot supply. Select the sourcing path for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">How to Proceed?</label>
+      <div class="radio-group">
+        <label class="radio-option" onclick="selectRadio('vps','category')"><input type="radio" name="vps" value="category"/><div class="radio-option-content"><div class="radio-option-label">🎯 Category Team identifies a new vendor directly</div></div></label>
+        <label class="radio-option" onclick="selectRadio('vps','procurement')"><input type="radio" name="vps" value="procurement"/><div class="radio-option-content"><div class="radio-option-label">🏭 Request Procurement Team to identify a vendor</div><div class="radio-option-sub">Procurement Team will be notified via email</div></div></label>
+      </div></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('vendor_path',()=>{const r=getRadio('vps');return r?{path:r}:null;})">Continue →</button></div>`,
+
+    procurement_vendor: () => `<div class="detail-subtitle">Identify and confirm a vendor for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">Vendor Name</label><input class="form-input" id="f_vname" placeholder="Vendor company name" /></div>
+      <div class="form-group"><label class="form-label required">Vendor Contact</label><input class="form-input" id="f_vcontact" placeholder="Contact person / email / phone" /></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="f_pvnotes"></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('procurement_vendor',()=>({vendorName:v('f_vname'),vendorContact:v('f_vcontact'),notes:v('f_pvnotes')}),['f_vname','f_vcontact'])">Save & Continue →</button></div>`,
+
+    vendor_onboarding: () => `<div class="detail-subtitle">Complete vendor onboarding for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">Vendor Name</label><input class="form-input" id="f_ob_vendor" placeholder="Vendor name" value="${esc(serverState.tasks.procurement_vendor?.data?.vendorName||'')}" /></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="f_ob_notes"></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('vendor_onboarding',()=>({vendor:v('f_ob_vendor'),status:'complete',notes:v('f_ob_notes')}),['f_ob_vendor'])">Save & Complete →</button></div>`,
+
+    rd_process: () => `<div class="detail-subtitle">Track material receipt and R&D completion for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">Material Received for R&D?</label>
+      <div class="radio-group">
+        <label class="radio-option" onclick="selectRadio('rd_recv','yes')"><input type="radio" name="rd_recv" value="yes"/><div class="radio-option-content"><div class="radio-option-label">✅ Yes — Received</div><div class="radio-option-sub">Production team will be notified</div></div></label>
+        <label class="radio-option" onclick="selectRadio('rd_recv','no')"><input type="radio" name="rd_recv" value="no"/><div class="radio-option-content"><div class="radio-option-label">⏳ No — Awaiting</div><div class="radio-option-sub">Procurement team will be notified to follow up</div></div></label>
+      </div></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="f_rdnotes"></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('rd_process',()=>{const r=getRadio('rd_recv');return r?{received:r,notes:v('f_rdnotes')}:null;})">Save & Complete →</button></div>`,
+
+    sample_prep: () => simpleTask('sample_prep','Sample Preparation',`Confirm sample preparation is complete for <strong>${esc(product)}</strong>.`,'f_sp','Sample details, observations...','Confirm Ready →'),
+    inventory_form: () => `<div class="detail-subtitle">Submit inventory details for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">Quantity Required</label><input class="form-input" id="f_inv_qty" type="number" placeholder="e.g. 500" /></div>
+      <div class="form-group"><label class="form-label required">Unit Price (₹)</label><input class="form-input" id="f_inv_price" type="number" placeholder="e.g. 250" /></div>
+      <div class="form-group"><label class="form-label required">Warehouse / Location</label><input class="form-input" id="f_inv_loc" placeholder="e.g. Bangalore Hub" /></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="f_inv_notes"></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('inventory_form',()=>({qty:v('f_inv_qty'),price:v('f_inv_price'),location:v('f_inv_loc'),notes:v('f_inv_notes')}),['f_inv_qty','f_inv_price','f_inv_loc'])">Submit →</button></div>`,
+
+    inventory_approval: () => `<div class="detail-subtitle">Review and approve/reject the inventory for <strong>${esc(product)}</strong>.</div>
+      ${serverState.tasks.inventory_form?.data?`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--text2);">Qty: ${serverState.tasks.inventory_form.data.qty} · Price: ₹${serverState.tasks.inventory_form.data.price} · Location: ${serverState.tasks.inventory_form.data.location}</div>`:''}
+      <div class="form-group"><label class="form-label required">Decision</label>
+      <div class="radio-group">
+        <label class="radio-option" onclick="selectRadio('inv_dec','approved');toggleEl('rej-reason',false)"><input type="radio" name="inv_dec" value="approved"/><div class="radio-option-content"><div class="radio-option-label">✅ Approve</div></div></label>
+        <label class="radio-option" onclick="selectRadio('inv_dec','rejected');toggleEl('rej-reason',true)"><input type="radio" name="inv_dec" value="rejected"/><div class="radio-option-content"><div class="radio-option-label">❌ Reject</div></div></label>
+      </div></div>
+      <div class="form-group" id="rej-reason" style="display:none;"><label class="form-label required">Rejection Reason</label><textarea class="form-input" id="f_rej_reason"></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('inventory_approval',()=>{const d=getRadio('inv_dec');if(!d)return null;if(d==='rejected'&&!v('f_rej_reason')){showToast('Please provide rejection reason','error');return null;}return{decision:d,reason:v('f_rej_reason')};})">Submit Decision →</button></div>`,
+
+    po_confirmation: () => `<div class="detail-subtitle">Raise Purchase Order for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">PO Number</label><input class="form-input" id="f_po_num" placeholder="e.g. PO-2024-001" /></div>
+      <div class="form-group"><label class="form-label required">PO Amount (₹)</label><input class="form-input" id="f_po_amt" type="number" /></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="f_po_notes"></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('po_confirmation',()=>({poNumber:v('f_po_num'),amount:v('f_po_amt'),notes:v('f_po_notes')}),['f_po_num','f_po_amt'])">Confirm PO →</button></div>`,
+
+    sku_update: () => `<div class="detail-subtitle">Update and verify SKU for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">SKU Code</label><input class="form-input" id="f_sku" placeholder="e.g. PRN-APP-001-BLK-M" /></div>
+      <div class="form-group"><label class="form-label">Raise a Doubt (optional)</label><textarea class="form-input" id="f_sku_doubt" placeholder="Any doubt? Category team will be notified."></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('sku_update',()=>({skuCode:v('f_sku'),doubt:v('f_sku_doubt')}),['f_sku'])">Save & Complete →</button></div>`,
+
+    website_content: () => `<div class="detail-subtitle">Prepare website content for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">Product Title</label><input class="form-input" id="f_wt" placeholder="SEO-optimised title" /></div>
+      <div class="form-group"><label class="form-label required">Product Description</label><textarea class="form-input" id="f_wd" style="min-height:100px;"></textarea></div>
+      <div class="form-group"><label class="form-label">Price (₹)</label><input class="form-input" id="f_wp" type="number" /></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('website_content',()=>({title:v('f_wt'),description:v('f_wd'),price:v('f_wp')}),['f_wt','f_wd'])">Submit →</button></div>`,
+
+    material_dispatch: () => `<div class="detail-subtitle">Confirm material dispatch for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">Dispatched From</label><input class="form-input" id="f_df" placeholder="e.g. Bangalore Warehouse" /></div>
+      <div class="form-group"><label class="form-label required">Dispatched To</label><input class="form-input" id="f_dt" placeholder="e.g. Mumbai Hub" /></div>
+      <div class="form-group"><label class="form-label">AWB / Tracking</label><input class="form-input" id="f_awb" /></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="f_dn"></textarea></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('material_dispatch',()=>({from:v('f_df'),to:v('f_dt'),awb:v('f_awb'),notes:v('f_dn')}),['f_df','f_dt'])">Confirm Dispatch →</button></div>`,
+
+    material_received_update: () => simpleTask('material_received_update','Material Received Update',`Confirm material received at warehouse for <strong>${esc(product)}</strong>.`,'f_mr','Quantity received, any discrepancies...','Confirm Receipt →'),
+    hub_briefing:          () => simpleTask('hub_briefing','Hub Briefing',`Confirm all hubs briefed for <strong>${esc(product)}</strong>.`,'f_hb','Briefing notes...','Confirm Briefed →'),
+    stock_dispatch:        () => simpleTask('stock_dispatch','Stock Dispatch',`Confirm stock dispatched to all hubs for <strong>${esc(product)}</strong>.`,'f_sd','Dispatch notes...','Confirm Dispatched →'),
+    marketing_collateral:  () => simpleTask('marketing_collateral','Marketing Collateral',`Confirm marketing collateral sent for <strong>${esc(product)}</strong>.`,'f_mc','Collateral details...','Confirm Sent →'),
+    express_delivery:      () => simpleTask('express_delivery','Express Delivery',`Set up express delivery for <strong>${esc(product)}</strong>.`,'f_ed','Express delivery details...','Confirm Setup →'),
+    sales_briefing:        () => simpleTask('sales_briefing','Sales Briefing',`Confirm sales team briefed for <strong>${esc(product)}</strong>.`,'f_sb','Briefing notes...','Confirm Briefed →'),
+    release_notes:         () => `<div class="detail-subtitle">Publish release notes for <strong>${esc(product)}</strong>.</div>
+      <div class="form-group"><label class="form-label required">Release Notes</label><textarea class="form-input" id="f_rn" style="min-height:140px;" placeholder="Key features, launch details..."></textarea></div>
+      <div class="form-group"><label class="form-label">Launch Date</label><input class="form-input" id="f_ld" type="date" /></div>
+      <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('release_notes',()=>({notes:v('f_rn'),launchDate:v('f_ld')}),['f_rn'])">🎉 Publish</button></div>`,
+  };
+  const fn = forms[id];
+  if (!fn) return header + `<div class="detail-subtitle">Form not available.</div><div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">Close</button></div>`;
+  return header + fn();
+}
+
+function simpleTask(taskId, label, subtitle, noteId, placeholder, btnLabel) {
+  return `<div class="detail-subtitle">${subtitle}</div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="${noteId}" placeholder="${placeholder}"></textarea></div>
+    <div class="detail-footer"><button class="btn btn-ghost btn-sm" onclick="closeTaskModal()">← Dashboard</button><button class="btn btn-primary btn-sm" onclick="submitTask('${taskId}',()=>({notes:v('${noteId}')}),[])">${btnLabel}</button></div>`;
+}
+
+// ── Task Submission ───────────────────────────────────────────
+async function submitTask(taskId, dataFn, required) {
+  if (required) for (const f of required) {
+    const el = document.getElementById(f);
+    if (el && !el.value.trim()) { el.focus(); el.style.borderColor='var(--error)'; setTimeout(()=>el.style.borderColor='',2000); showToast('Please fill in all required fields','error'); return; }
+  }
+  const data = dataFn();
+  if (data === null) { showToast('Please select an option','error'); return; }
+  const stateUpdate = {};
+  if (taskId === 'product_info' && data.productName) stateUpdate.productName = data.productName;
+  try {
+    if (Object.keys(stateUpdate).length) await api('POST', '/api/state', stateUpdate);
+    serverState = await api('POST', '/api/task/done', { taskId, completedBy: currentUser.email, data });
+    closeTaskModal(); renderDashboard(); showToast('Task completed!','success');
+  } catch(e) { showToast('Error: ' + e.message,'error'); }
+}
+
+// ── Admin Panel ───────────────────────────────────────────────
+async function renderAdmin() {
+  try {
+    const [users, emailLog, state, pwStatus] = await Promise.all([
+      api('GET','/api/users'), api('GET','/api/email/log'),
+      api('GET','/api/state'), api('GET','/api/auth/password-status'),
+    ]);
+    serverState = state;
+    const tasks = Object.values(state.tasks);
+    const dc = tasks.filter(t=>t.status==='done').length;
+    const pc = tasks.filter(t=>t.status==='pending').length;
+    const lc = tasks.filter(t=>t.status==='locked').length;
+    document.getElementById('admin-stats').innerHTML = `
+      <div class="stat-box"><div class="sv" style="color:var(--success)">${dc}</div><div class="sl">Completed</div></div>
+      <div class="stat-box"><div class="sv" style="color:var(--primary)">${pc}</div><div class="sl">Pending</div></div>
+      <div class="stat-box"><div class="sv" style="color:var(--text3)">${lc}</div><div class="sl">Locked</div></div>`;
+
+    // User list with password status
+    const allUsers = [];
+    for (const [team, emails] of Object.entries(users)) for (const email of emails||[]) allUsers.push({ email, team });
+    document.getElementById('user-list').innerHTML = allUsers.length ? allUsers.map(u => {
+      const m = TEAM_META[u.team]||{};
+      const hasPw = !!(pwStatus[u.email.toLowerCase()] && pwStatus[u.email.toLowerCase()].hasPassword);
+      return `<div class="user-item">
+        <div class="user-email" title="${esc(u.email)}">${esc(u.email)}</div>
+        <span class="user-team-chip ${m.color||''}">${m.emoji||''} ${u.team}</span>
+        <span class="pw-badge ${hasPw?'has-pw':'no-pw'}">${hasPw?'🔐 Password':'No PW'}</span>
+        <div class="user-actions">
+          <button class="icon-btn" onclick="openPwModal('${esc(u.email)}','${u.team}')" title="Set/Reset Password">${hasPw?'Reset PW':'Set PW'}</button>
+          <button class="icon-btn del" onclick="removeUser('${esc(u.email)}','${u.team}')" title="Remove">✕</button>
+        </div>
+      </div>`;
+    }).join('') : '<div class="empty-state" style="padding:12px;"><p>No users yet.</p></div>';
+
+    // Task list
+    document.getElementById('task-admin-list').innerHTML = Object.entries(state.tasks).map(([id,t]) => {
+      const sc = t.status==='done'?'background:var(--success-bg);color:var(--success);':t.status==='pending'?'background:rgba(99,102,241,.15);color:var(--primary);':'background:var(--locked-bg);color:var(--text3);';
+      return `<div class="task-admin-item"><div class="tai-label">${esc(t.label)}</div><span class="tai-status" style="${sc}">${t.status}</span><button class="tai-reset" onclick="resetTask('${id}')">Reset</button></div>`;
+    }).join('');
+
+    // Email log
+    const sorted = [...emailLog].reverse().slice(0,30);
+    document.getElementById('email-log').innerHTML = sorted.length ? sorted.map(e=>`
+      <div class="email-item"><div class="ei-subject">${esc(e.subject)}</div><div class="ei-to">To: ${esc(Array.isArray(e.to)?e.to.join(', '):e.to)}</div><div class="ei-time">${new Date(e.sentAt).toLocaleString()}</div></div>`).join('')
+      : '<div style="padding:12px;font-size:13px;color:var(--text3);text-align:center;">No emails sent yet.</div>';
+  } catch(e) { console.error('Admin render error',e); }
+}
+
+async function addUser() {
+  const email = document.getElementById('new-user-email').value.trim();
+  const team  = document.getElementById('new-user-team').value;
+  if (!email) { showToast('Enter an email address','error'); return; }
+  try { await api('POST','/api/users',{email,team}); document.getElementById('new-user-email').value=''; showToast(email + ' added to ' + team,'success'); renderAdmin(); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+async function removeUser(email, team) {
+  if (!confirm('Remove ' + email + ' from ' + team + '?')) return;
+  try { await api('DELETE','/api/users',{email,team}); showToast(email + ' removed','info'); renderAdmin(); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+async function resetTask(taskId) {
+  if (!confirm('Reset task "' + taskId + '"? This will mark it as pending again.')) return;
+  try { serverState = await api('POST','/api/task/reset/'+taskId); showToast('Task reset','info'); renderAdmin(); renderDashboard(); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+async function resetAll() {
+  if (!confirm('Reset ALL launch data?')) return;
+  if (!confirm('Are you absolutely sure? All tasks will go back to start.')) return;
+  try { const r = await api('POST','/api/reset'); serverState=r.state; renderDashboard(); renderAdmin(); showToast('All data reset','info'); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+// ── Password Modal (Admin) ────────────────────────────────────
+function openPwModal(email, team) {
+  pwModalTarget = { email, team };
+  document.getElementById('pw-modal-desc').textContent = 'Set a new password for ' + email;
+  document.getElementById('pw-modal-input').value = '';
+  document.getElementById('err-pw-modal').classList.remove('show');
+  document.getElementById('pw-modal').classList.add('show');
+}
+function closePwModal() { document.getElementById('pw-modal').classList.remove('show'); pwModalTarget = null; }
+
+async function adminSetPassword() {
+  if (!pwModalTarget) return;
+  const pw = document.getElementById('pw-modal-input').value;
+  const errEl = document.getElementById('err-pw-modal');
+  errEl.classList.remove('show');
+  if (!pw || pw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); return; }
+  try {
+    await api('POST','/api/auth/admin/set-password',{ email: pwModalTarget.email, newPassword: pw });
+    showToast('Password set for ' + pwModalTarget.email,'success');
+    closePwModal(); renderAdmin();
+  } catch(e) { errEl.textContent = e.message; errEl.classList.add('show'); }
+}
+
+async function adminClearPassword() {
+  if (!pwModalTarget) return;
+  if (!confirm('Remove password for ' + pwModalTarget.email + '? They will log in with email only.')) return;
+  try {
+    await api('POST','/api/auth/admin/clear-password',{ email: pwModalTarget.email });
+    showToast('Password removed for ' + pwModalTarget.email,'info');
+    closePwModal(); renderAdmin();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+const v   = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+const esc = s  => String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function selectRadio(name, value) {
+  document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+    r.checked = r.value === value;
+    r.closest('.radio-option').classList.toggle('selected', r.value === value);
+  });
+}
+function getRadio(name) { const r = document.querySelector(`input[name="${name}"]:checked`); return r ? r.value : null; }
+function toggleEl(id, show) { const el = document.getElementById(id); if (el) el.style.display = show?'block':'none'; }
+
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeTaskModal(); closePwModal(); }
+  if (e.key === 'Enter') {
+    const step = document.querySelector('.auth-step.active');
+    if (!step) return;
+    if (step.id === 'step-email')    checkEmail();
+    if (step.id === 'step-password') doLogin();
+    if (step.id === 'step-forgot')   doForgot();
+    if (step.id === 'step-reset')    doResetPassword();
+  }
+});
+
+// Check for reset token in URL
+const urlParams = new URLSearchParams(window.location.search);
+const resetToken = urlParams.get('reset_token');
+if (resetToken) {
+  showStep('step-reset');
+} else {
+  // Restore session
+  const saved = sessionStorage.getItem('printo_user');
+  if (saved) {
+    try { currentUser = JSON.parse(saved); startApp(); } catch { sessionStorage.removeItem('printo_user'); }
+  }
+}
+</script>
+</body>
+</html>
