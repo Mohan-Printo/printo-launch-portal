@@ -118,11 +118,68 @@ function recalculate(state) {
 
 // ─── Email ─────────────────────────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST   || 'smtp.gmail.com',
-  port:   parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth:   { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  },
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
+  tls: {
+    rejectUnauthorized: false
+  }
 });
+
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("[SMTP VERIFY ERROR]", error);
+  } else {
+    console.log("[SMTP VERIFY SUCCESS] Server is ready to send emails");
+  }
+});
+
+async function sendEmail({ to, subject, html }) {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.log("[EMAIL SKIP] EMAIL not configured");
+    return { skipped: true };
+  }
+
+  const recipients = Array.isArray(to) ? to.filter(Boolean) : [to].filter(Boolean);
+
+  if (!recipients.length) {
+    console.log("[EMAIL SKIP] No recipients");
+    return { skipped: true };
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"Printo Launch Portal" <${process.env.EMAIL_USER}>`,
+      to: recipients.join(", "),
+      subject,
+      html,
+    });
+
+    console.log("[EMAIL SENT]", info.response);
+
+    const log = readJSON(EMAIL_LOG, []);
+    log.push({
+      to: recipients,
+      subject,
+      sentAt: new Date().toISOString(),
+      messageId: info.messageId
+    });
+    writeJSON(EMAIL_LOG, log);
+
+    return info;
+  } catch (error) {
+    console.error("[EMAIL ERROR]", error.message);
+    console.error("[EMAIL FULL ERROR]", error);
+    throw error;
+  }
+}
 
 async function sendEmail({ to, subject, html }) {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) { console.log('[EMAIL SKIP] SMTP not configured'); return { skipped: true }; }
