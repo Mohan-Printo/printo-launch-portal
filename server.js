@@ -390,7 +390,6 @@ app.post('/api/login', (req, res) => {
     displayName: email.split('@')[0],
     sessionToken
   });
-});
 
 // ── Auth: Logout ──────────────────────────────────────────────────────
 
@@ -886,3 +885,4 @@ app.listen(PORT, () => {
   console.log('   Email  : ' + (process.env.EMAIL_USER ? 'OK: ' + process.env.EMAIL_USER : 'NOT configured'));
   console.log('   Admin  : ' + (process.env.ADMIN_EMAIL || 'Set ADMIN_EMAIL in .env') + '\n');
 });
+
