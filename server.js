@@ -3,6 +3,7 @@ const crypto = require('crypto');
 function createSession(email, team) {
   const sessions = readJSON(SESSIONS_FILE, {});
   const token = crypto.randomBytes(32).toString('hex');
+  const nodemailer = require('nodemailer');
 
   sessions[token] = {
     email,
